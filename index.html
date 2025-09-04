@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SalineWin Ultimate Rave v4.0</title>
+  <script>
+    let posX = 100, posY = 100, dx = 16, dy = 14;
+    let popupBall, ballInterval, stripeInterval, discoInterval;
+    let stripeWindows = [];
+    let crossWin, crossStart;
+    let discoStart = false;
+
+    function playAudio() {
+      const audio = new Audio('salinewin.mp3');
+      audio.loop = true;
+      audio.play();
+    }
+
+    // FASE 1 - Bal + trail
+    function launchBallPhase() {
+      popupBall = window.open('', '', 'width=200,height=200,left=100,top=100');
+      if (!popupBall) return;
+      popupBall.document.write(`
+        <style>body{margin:0;background:black;display:flex;align-items:center;justify-content:center}
+        .ball{width:80px;height:80px;border-radius:50%;background:hsl(${Math.random()*360},100%,50%)}</style>
+        <body><div class="ball"></div></body>
+      `);
+      let start = Date.now();
+      ballInterval = setInterval(() => {
+        let elapsed = Date.now() - start;
+        if (elapsed >= 15000) {
+          clearInterval(ballInterval);
+          try { popupBall.close(); } catch {}
+          launchStripePhase();
+          setTimeout(() => launchCrossPhase(), 15000);
+          setTimeout(() => launchDiscoPhase(), 30000);
+          return;
+        }
+        posX += dx; posY += dy;
+        if (posX < 0 || posX > screen.availWidth - 200) dx *= -1;
+        if (posY < 0 || posY > screen.availHeight - 200) dy *= -1;
+        try { popupBall.moveTo(posX, posY); } catch {}
+        spawnTrailBall(posX, posY);
+      }, 30);
+    }
+
+    function spawnTrailBall(x, y) {
+      const trail = window.open('', '', `width=60,height=60,left=${x},top=${y}`);
+      if (!trail) return;
+      trail.document.write(`
+        <style>body{margin:0;background:black}
+        .ball{width:60px;height:60px;border-radius:50%;background:hsl(${Math.random()*360},100%,50%)}</style>
+        <body><div class="ball"></div></body>
+      `);
+      setTimeout(() => { try { trail.close(); } catch {} }, 5000);
+    }
+
+    // FASE 2 - Strepen
+    function launchStripePhase() {
+      let start = Date.now();
+      stripeInterval = setInterval(() => {
+        if (Date.now() - start >= 15000) {
+          clearInterval(stripeInterval);
+          stripeWindows.forEach(w => { try { w.close(); } catch {} });
+          return;
+        }
+        const y = Math.floor(Math.random() * (screen.availHeight - 40));
+        const stripe = window.open('', '', `width=500,height=40,left=0,top=${y}`);
+        if (!stripe) return;
+        const color = `hsl(${Math.random()*360},100%,50%)`;
+        stripe.document.write(`
+          <style>body{margin:0;background:black;display:flex;align-items:center;justify-content:center}
+          .stripe{width:480px;height:30px;background:${color}}</style>
+          <body><div class="stripe"></div></body>
+        `);
+        stripeWindows.push(stripe);
+        if (stripeWindows.length > 100) {
+          try { stripeWindows.shift().close(); } catch {}
+        }
+      }, 150);
+    }
+
+    // FASE 3 - Kruisje volgt muis + trail
+    function launchCrossPhase() {
+      crossStart = Date.now();
+      crossWin = window.open('', '', 'width=80,height=80,left=400,top=400');
+      if (!crossWin) return;
+      crossWin.document.write(`
+        <style>body{margin:0;background:black;display:flex;justify-content:center;align-items:center}
+        img{width:80px;height:80px}</style>
+        <body><img src="f3.jpg" /></body>
+        <script>
+          window.addEventListener("message", function(e) {
+            const [x, y] = e.data;
+            window.moveTo(x, y);
+          });
+        <\/script>
+      `);
+
+      document.addEventListener('mousemove', e => {
+        if (Date.now() - crossStart >= 15000) return;
+        const x = e.screenX;
+        const y = e.screenY;
+        try { crossWin.postMessage([x, y], "*"); } catch {}
+        spawnCrossTrail(x, y);
+      });
+    }
+
+    function spawnCrossTrail(x, y) {
+      const trail = window.open('', '', `width=60,height=60,left=${x},top=${y}`);
+      if (!trail) return;
+      trail.document.write(`
+        <style>body{margin:0;background:black;display:flex;justify-content:center;align-items:center}
+        img{width:60px;height:60px}</style>
+        <body><img src="f3.jpg" /></body>
+      `);
+      setTimeout(() => { try { trail.close(); } catch {} }, 5000);
+    }
+
+    // FASE 4 - Disco infinity
+    function launchDiscoPhase() {
+      if (discoStart) return;
+      discoStart = true;
+      discoInterval = setInterval(() => {
+        for (let i = 0; i < 3; i++) {
+          const disco = window.open('', '', 'width=300,height=300,left=100,top=100');
+          if (!disco) continue;
+          disco.document.write(`
+            <style>body{margin:0;background:black;display:flex;align-items:center;justify-content:center}
+            .cube{width:100%;height:100%;background:hsl(${Math.random()*360},100%,50%)}</style>
+            <body><div class="cube"></div></body>
+          `);
+          let x = Math.random() * screen.availWidth;
+          let y = Math.random() * screen.availHeight;
+          let dx = Math.random() * 20 + 15;
+          let dy = Math.random() * 20 + 15;
+          setInterval(() => {
+            x += dx; y += dy;
+            if (x < 0 || x > screen.availWidth - 300) dx *= -1;
+            if (y < 0 || y > screen.availHeight - 300) dy *= -1;
+            try { disco.moveTo(x, y); } catch {}
+          }, 20);
+        }
+      }, 500);
+    }
+
+    window.onload = () => {
+      playAudio();
+      launchBallPhase();
+    };
+  </script>
+</head>
+<body style="background:black;color:white;text-align:center;">
+  <h1> </h1>
+</body>
+</html>
